@@ -8,7 +8,7 @@
 
 /dts-v1/;
 
-#include "imx6ul-imx6ull-var-dart-6ulcustomboard-sd-card-magi.dtsi"
+#include "imx6ul-imx6ull-var-dart-6ulcustomboard-magi.dtsi"
 
 / {
 	model = "Variscite DART-6UL with i.MX6ULL, eMMC & SD card support on VAR-6ULCustomBoard";
