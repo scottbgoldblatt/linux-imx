@@ -14,28 +14,22 @@
 #include "imx6ull-var-dart-6ulcustomboard.dtsi"
 #include "imx6ul-imx6ull-var-dart-6ulcustomboard-sd-card.dtsi"
 
-
-/* disable tsc*/
-&tsc {
-	status = "disabled";
-};
-
-/* disable ethernet*/
+/* disable ethernet, pins required for uart4/5 */
 &fec1 {
 	status = "disabled";
 };
 
+/* disable LCD, pins required for uart4 */
+&i2c1 {
+	status = "disabled";
+};
+
+/* disable LCD, pins required for uart8 */
+&lcdif {
+	status = "disabled";
+};
+
 &iomuxc {
-    pinctrl_i2c1: i2c1grp {
-		fsl,pins = <
-			/*MX6UL_PAD_UART4_TX_DATA__I2C1_SCL	0x4001b8b0*/
-            /*MX6UL_PAD_UART4_RX_DATA__I2C1_SDA	0x4001b8b0*/
-            /*MX6UL_PAD_CSI_PIXCLK__I2C1_SCL      0x4001b8b0*/
-            /*MX6UL_PAD_CSI_MCLK__I2C1_SDA        0x4001b8b0*/
-            MX6UL_PAD_GPIO1_IO03__I2C1_SDA      0x4001b8b0
-            MX6UL_PAD_GPIO1_IO02__I2C1_SCL      0x4001b8b0
-		>;
-	};
 
     pinctrl_uart4: uart4grp {
 		fsl,pins = <
@@ -72,6 +66,13 @@
 			MX6UL_PAD_ENET1_RX_ER__UART7_DCE_RTS	0x1b0b1
 		>;
 	};
+
+    pinctrl_uart8: uart8grp {
+		fsl,pins = <
+			MX6UL_PAD_LCD_DATA20__UART8_DCE_TX      0x1b0b1
+			MX6UL_PAD_LCD_DATA21__UART8_DCE_RX	    0x1b0b1
+		>;
+	};
 };
 
 /* ttymxc3 UART */
@@ -103,5 +104,12 @@
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_uart7>;
 	fsl,uart-has-rtscts;
+	status = "okay";
+};
+
+/* ttymxc7 UART */
+&uart8 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_uart8>;
 	status = "okay";
 };
