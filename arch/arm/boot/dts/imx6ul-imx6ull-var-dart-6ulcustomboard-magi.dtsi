@@ -73,6 +73,14 @@
 			MX6UL_PAD_LCD_DATA21__UART8_DCE_RX	    0x1b0b1
 		>;
 	};
+
+    pinctrl_wake_pins: gpio_wakepinsgrp {
+		fsl,pins = <
+            MX6UL_PAD_SNVS_TAMPER5__GPIO5_IO05      0x1b0b0 
+            MX6UL_PAD_SNVS_TAMPER8__GPIO5_IO08      0x1b0b0
+            MX6UL_PAD_SNVS_TAMPER9__GPIO5_IO09      0x1b0b0
+		>;
+	};
 };
 
 /* ttymxc3 UART */
@@ -112,4 +120,33 @@
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_uart8>;
 	status = "okay";
+};
+
+/ {
+	wakepins {
+		compatible = "gpio-keys";
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_wake_pins>;
+
+        gpio5_io5 {
+			label = "Back";
+			gpios = <&gpio5 5 GPIO_ACTIVE_LOW>;
+			linux,code = <5>;
+			gpio-key,wakeup;
+		};
+
+        gpio5_io8 {
+			label = "Back";
+			gpios = <&gpio5 8 GPIO_ACTIVE_LOW>;
+			linux,code = <8>;
+			gpio-key,wakeup;
+		};
+
+        gpio5_io9 {
+			label = "Back";
+			gpios = <&gpio5 9 GPIO_ACTIVE_LOW>;
+			linux,code = <9>;
+			gpio-key,wakeup;
+		};
+	};
 };
