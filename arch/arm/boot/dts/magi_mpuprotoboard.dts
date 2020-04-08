@@ -11,6 +11,6 @@
 #include "magi_mpuprotoboard.dtsi"
 
 / {
-	model = "Variscite DART-6UL with i.MX6ULL, eMMC & SD card support on VAR-6ULCustomBoard";
+	model = "MAGI Custom Board";
 	compatible = "variscite,imx6ul-var-dart", "fsl,imx6ull";
 };
