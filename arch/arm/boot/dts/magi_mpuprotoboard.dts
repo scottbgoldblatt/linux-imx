@@ -11,6 +11,6 @@
 #include "magi_mpuprotoboard.dtsi"
 
 / {
-	model = "MAGI Custom Board";
+	model = "MAGI MPU Prototype Board";
 	compatible = "variscite,imx6ul-var-dart", "fsl,imx6ull";
 };
