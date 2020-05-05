@@ -118,35 +118,35 @@
 		pinctrl-0 = <&pinctrl_wake_pins>;
 
         gpio5_io1 {
-			label = "Back";
+			label = "MAGI Wake Pin 1";
 			gpios = <&gpio5 1 GPIO_ACTIVE_LOW>;
 			linux,code = <5>;
 			gpio-key,wakeup;
 		};
 
         gpio5_io3 {
-			label = "Back";
+			label = "MAGI Wake Pin 3";
 			gpios = <&gpio5 3 GPIO_ACTIVE_LOW>;
 			linux,code = <5>;
 			gpio-key,wakeup;
 		};
         
         gpio5_io5 {
-			label = "Back";
+			label = "MAGI Wake Pin 5";
 			gpios = <&gpio5 5 GPIO_ACTIVE_LOW>;
 			linux,code = <5>;
 			gpio-key,wakeup;
 		};
 
         gpio5_io8 {
-			label = "Back";
+			label = "MAGI Wake Pin 8";
 			gpios = <&gpio5 8 GPIO_ACTIVE_LOW>;
 			linux,code = <8>;
 			gpio-key,wakeup;
 		};
 
         gpio5_io9 {
-			label = "Back";
+			label = "MAGI Wake Pin 9";
 			gpios = <&gpio5 9 GPIO_ACTIVE_LOW>;
 			linux,code = <9>;
 			gpio-key,wakeup;
