@@ -1,3 +1,32 @@
+See https://variwiki.com/index.php?title=Yocto_Build_Linux&release=RELEASE_THUD_V1.1_DART-6UL
+
+source /opt/magi-distro/2.6.2/environment-setup-armv7at2hf-neon-fslc-linux-gnueabi
+make mrproper
+make magi_defconfig
+make menuconfig
+[Do stuff in menuconfig, new defconfig is saved in .config.  Overwrite arch/armconfigs/magi_defconfig with new config file]
+[Edit device trees and stuff]
+
+Build everything
+make -j4
+
+Build device tree only:
+make -j4 magi_mpuprotoboard.dtb
+
+Build zImage only:
+$ make -j4  zImage
+
+Build modules only:
+$ make -j4  modules
+
+Build device trees only:
+$ make -j4 dtbs
+
+Copy kernel to SD using the following commands:
+cp arch/arm/boot/zImage /media/mattmunee/BOOT-MAGI
+sudo make ARCH=arm modules_install INSTALL_MOD_PATH=/media/mattmunee/rootfs
+cp arch/arm/boot/dts/magi_mpuprotoboard.dtb /media/mattmunee/BOOT-MAGI
+
 Linux kernel
 ============
 
