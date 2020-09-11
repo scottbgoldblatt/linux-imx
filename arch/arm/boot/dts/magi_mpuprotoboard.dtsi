@@ -251,6 +251,19 @@
 	pinctrl-0 = <&pinctrl_i2c2>;
 	status = "okay";
 
+	bat: battery {
+		compatible = "simple-battery";
+		voltage-min-design-microvolt = <2700000>;
+		energy-full-design-microwatt-hours = <18000000>;
+		charge-full-design-microamp-hours = <5000000>;
+	};
+
+	bq27426: fuel-gauge@55 {
+		compatible = "ti,bq27426";
+		reg = <0x55>;
+		monitored-battery = <&bat>;
+	};
+
 	codec: wm8731@1a {
 		#sound-dai-cells = <0>;
 		compatible = "wlf,wm8731";
