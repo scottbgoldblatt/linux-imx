@@ -27,6 +27,15 @@ cp arch/arm/boot/zImage /media/mattmunee/BOOT-MAGI
 sudo make ARCH=arm modules_install INSTALL_MOD_PATH=/media/mattmunee/rootfs
 cp arch/arm/boot/dts/magi_mpuprotoboard.dtb /media/mattmunee/BOOT-MAGI
 
+To load bq27426 kernel module, execute the following:
+$ echo bq27426 0x55 > /sys/bus/i2c/devices/i2c-1/new_device
+
+To unload the module:
+$ echo 0x55 > /sys/bus/i2c/devices/i2c-1/delete_device
+
+When module is loaded, sysfs entry appears at
+/sys/class/power_supply/bq27426-0
+
 Linux kernel
 ============
 
