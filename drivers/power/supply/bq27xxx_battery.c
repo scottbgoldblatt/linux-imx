@@ -91,6 +91,10 @@
 #define BQ27XXX_SET_CFGUPDATE		0x13
 #define BQ27XXX_SOFT_RESET		0x42
 #define BQ27XXX_RESET			0x41
+#define BQ27XXX_CHEM_ID		0x08
+#define BQ27XXX_CHEM_A_3230		0x30
+#define BQ27XXX_CHEM_B_1202		0x31
+#define BQ27XXX_CHEM_C_3142		0x32
 
 #define BQ27XXX_RS			(20) /* Resistor sense mOhm */
 #define BQ27XXX_POWER_CONSTANT		(29200) /* 29.2 µV^2 * 1000 */
@@ -441,9 +445,28 @@ static u8
 	},
 #define bq27411_regs bq27421_regs
 #define bq27425_regs bq27421_regs
-#define bq27426_regs bq27421_regs
 #define bq27441_regs bq27421_regs
 #define bq27621_regs bq27421_regs
+  bq27426_regs[BQ27XXX_REG_MAX] = {
+		[BQ27XXX_REG_CTRL] = 0x00,
+		[BQ27XXX_REG_TEMP] = 0x02,
+		[BQ27XXX_REG_INT_TEMP] = 0x1e,
+		[BQ27XXX_REG_VOLT] = 0x04,
+		[BQ27XXX_REG_AI] = 0x10,
+		[BQ27XXX_REG_FLAGS] = 0x06,
+		[BQ27XXX_REG_TTE] = INVALID_REG_ADDR,
+		[BQ27XXX_REG_TTF] = INVALID_REG_ADDR,
+		[BQ27XXX_REG_TTES] = INVALID_REG_ADDR,
+		[BQ27XXX_REG_TTECP] = INVALID_REG_ADDR,
+		[BQ27XXX_REG_NAC] = 0x08,
+		[BQ27XXX_REG_FCC] = 0x0e,
+		[BQ27XXX_REG_CYCT] = INVALID_REG_ADDR,
+		[BQ27XXX_REG_AE] = INVALID_REG_ADDR,
+		[BQ27XXX_REG_SOC] = 0x1c,
+		[BQ27XXX_REG_DCAP] = INVALID_REG_ADDR,
+		[BQ27XXX_REG_AP] = 0x18,
+		BQ27XXX_DM_REG_ROWS,
+	},
 	bq27z561_regs[BQ27XXX_REG_MAX] = {
 		[BQ27XXX_REG_CTRL] = 0x00,
 		[BQ27XXX_REG_TEMP] = 0x06,
@@ -715,9 +738,25 @@ static enum power_supply_property bq27421_props[] = {
 };
 #define bq27411_props bq27421_props
 #define bq27425_props bq27421_props
-#define bq27426_props bq27421_props
 #define bq27441_props bq27421_props
 #define bq27621_props bq27421_props
+static enum power_supply_property bq27426_props[] = {
+	POWER_SUPPLY_PROP_STATUS,
+	POWER_SUPPLY_PROP_PRESENT,
+	POWER_SUPPLY_PROP_VOLTAGE_NOW,
+	POWER_SUPPLY_PROP_CURRENT_NOW,
+	POWER_SUPPLY_PROP_CAPACITY,
+	POWER_SUPPLY_PROP_CAPACITY_LEVEL,
+	POWER_SUPPLY_PROP_TEMP,
+	POWER_SUPPLY_PROP_TECHNOLOGY,
+	POWER_SUPPLY_PROP_CHARGE_FULL,
+	POWER_SUPPLY_PROP_CHARGE_NOW,
+	POWER_SUPPLY_PROP_CHARGE_FULL_DESIGN,
+	POWER_SUPPLY_PROP_ENERGY_FULL_DESIGN,
+	POWER_SUPPLY_PROP_VOLTAGE_MIN_DESIGN,
+	POWER_SUPPLY_PROP_MANUFACTURER,
+	POWER_SUPPLY_PROP_CHEM_ID,
+};
 
 static enum power_supply_property bq27z561_props[] = {
 	POWER_SUPPLY_PROP_STATUS,
@@ -972,6 +1011,8 @@ static int poll_interval_param_set(const char *val, const struct kernel_param *k
 	unsigned int prev_val = *(unsigned int *) kp->arg;
 	int ret;
 
+	printk("poll_interval_param_set\n");
+
 	ret = param_set_uint(val, kp);
 	if (ret < 0 || prev_val == *(unsigned int *) kp->arg)
 		return ret;
@@ -1040,6 +1081,8 @@ static inline int bq27xxx_read_block(struct bq27xxx_device_info *di, int reg_ind
 {
 	int ret;
 
+	dev_info(di->dev, "bq27xxx_read_block\n");
+
 	if (!di || di->regs[reg_index] == INVALID_REG_ADDR)
 		return -EINVAL;
 
@@ -1059,6 +1102,8 @@ static inline int bq27xxx_write_block(struct bq27xxx_device_info *di, int reg_in
 {
 	int ret;
 
+	dev_info(di->dev, "bq27xxx_write_block\n");
+
 	if (!di || di->regs[reg_index] == INVALID_REG_ADDR)
 		return -EINVAL;
 
@@ -1077,6 +1122,8 @@ static int bq27xxx_battery_seal(struct bq27xxx_device_info *di)
 {
 	int ret;
 
+	dev_info(di->dev, "bq27xxx_battery_seal\n");
+
 	ret = bq27xxx_write(di, BQ27XXX_REG_CTRL, BQ27XXX_SEALED, false);
 	if (ret < 0) {
 		dev_err(di->dev, "bus error on seal: %d\n", ret);
@@ -1089,6 +1136,8 @@ static int bq27xxx_battery_seal(struct bq27xxx_device_info *di)
 static int bq27xxx_battery_unseal(struct bq27xxx_device_info *di)
 {
 	int ret;
+
+	dev_info(di->dev, "bq27xxx_battery_unseal\n");
 
 	if (di->unseal_key == 0) {
 		dev_err(di->dev, "unseal failed due to missing key\n");
@@ -1127,27 +1176,38 @@ static int bq27xxx_battery_read_dm_block(struct bq27xxx_device_info *di,
 {
 	int ret;
 
+	dev_info(di->dev, "bq27xxx_battery_read_dm_block\n");
+
 	buf->has_data = false;
 
 	ret = bq27xxx_write(di, BQ27XXX_DM_CLASS, buf->class, true);
-	if (ret < 0)
+	if (ret < 0) {
+		dev_err(di->dev, "Error: bq27xxx_write(di, BQ27XXX_DM_CLASS, buf->class, true);\n");
 		goto out;
+	}
 
 	ret = bq27xxx_write(di, BQ27XXX_DM_BLOCK, buf->block, true);
-	if (ret < 0)
+	if (ret < 0) {
+		dev_err(di->dev, "Error: bq27xxx_write(di, BQ27XXX_DM_BLOCK, buf->block, true);\n");
 		goto out;
+	}
 
 	BQ27XXX_MSLEEP(1);
 
 	ret = bq27xxx_read_block(di, BQ27XXX_DM_DATA, buf->data, BQ27XXX_DM_SZ);
-	if (ret < 0)
+	if (ret < 0) {
+		dev_err(di->dev, "Error: bq27xxx_read_block(di, BQ27XXX_DM_DATA, buf->data, BQ27XXX_DM_SZ);\n");
 		goto out;
+	}
 
 	ret = bq27xxx_read(di, BQ27XXX_DM_CKSUM, true);
-	if (ret < 0)
+	if (ret < 0) {
+		dev_err(di->dev, "Error: bq27xxx_read(di, BQ27XXX_DM_CKSUM, true);\n");
 		goto out;
+	}
 
 	if ((u8)ret != bq27xxx_battery_checksum_dm_block(buf)) {
+		dev_err(di->dev, "Error: bq27xxx_battery_checksum_dm_block(buf\n");
 		ret = -EINVAL;
 		goto out;
 	}
@@ -1171,6 +1231,8 @@ static void bq27xxx_battery_update_dm_block(struct bq27xxx_device_info *di,
 	const char *str = bq27xxx_dm_reg_name[reg_id];
 	u16 *prev = bq27xxx_dm_reg_ptr(buf, reg);
 
+	dev_info(di->dev, "bq27xxx_battery_update_dm_block\n");
+
 	if (prev == NULL) {
 		dev_warn(di->dev, "buffer does not match %s dm spec\n", str);
 		return;
@@ -1185,7 +1247,7 @@ static void bq27xxx_battery_update_dm_block(struct bq27xxx_device_info *di,
 		return;
 
 	if (be16_to_cpup(prev) == val) {
-		dev_info(di->dev, "%s has %u\n", str, val);
+		dev_dbg(di->dev, "%s has %u\n", str, val);
 		return;
 	}
 
@@ -1217,6 +1279,8 @@ static int bq27xxx_battery_cfgupdate_priv(struct bq27xxx_device_info *di, bool a
 	u16 cmd = active ? BQ27XXX_SET_CFGUPDATE : BQ27XXX_SOFT_RESET;
 	int ret, try = limit;
 
+	dev_info(di->dev, "bq27xxx_battery_cfgupdate_priv\n");
+
 	ret = bq27xxx_write(di, BQ27XXX_REG_CTRL, cmd, false);
 	if (ret < 0)
 		return ret;
@@ -1234,7 +1298,7 @@ static int bq27xxx_battery_cfgupdate_priv(struct bq27xxx_device_info *di, bool a
 	}
 
 	if (limit - try > 3)
-		dev_warn(di->dev, "cfgupdate %d, retries %d\n", active, limit - try);
+		dev_dbg(di->dev, "cfgupdate %d, retries %d\n", active, limit - try);
 
 	return 0;
 }
@@ -1242,6 +1306,7 @@ static int bq27xxx_battery_cfgupdate_priv(struct bq27xxx_device_info *di, bool a
 static inline int bq27xxx_battery_set_cfgupdate(struct bq27xxx_device_info *di)
 {
 	int ret = bq27xxx_battery_cfgupdate_priv(di, true);
+	dev_info(di->dev, "bq27xxx_battery_set_cfgupdate\n");
 	if (ret < 0 && ret != -EINVAL)
 		dev_err(di->dev, "bus error on set_cfgupdate: %d\n", ret);
 
@@ -1251,6 +1316,7 @@ static inline int bq27xxx_battery_set_cfgupdate(struct bq27xxx_device_info *di)
 static inline int bq27xxx_battery_soft_reset(struct bq27xxx_device_info *di)
 {
 	int ret = bq27xxx_battery_cfgupdate_priv(di, false);
+	dev_info(di->dev, "bq27xxx_battery_soft_reset\n");
 	if (ret < 0 && ret != -EINVAL)
 		dev_err(di->dev, "bus error on soft_reset: %d\n", ret);
 
@@ -1262,6 +1328,8 @@ static int bq27xxx_battery_write_dm_block(struct bq27xxx_device_info *di,
 {
 	bool cfgup = di->opts & BQ27XXX_O_CFGUP;
 	int ret;
+
+	dev_info(di->dev, "bq27xxx_battery_write_dm_block\n");
 
 	if (!buf->dirty)
 		return 0;
@@ -1321,12 +1389,123 @@ out:
 	return ret;
 }
 
+static int bq27xxx_battery_read_chem_id(struct bq27xxx_device_info *di)
+{
+	int chem_id=-EINVAL;
+	int ret;
+
+	dev_info(di->dev, "bq27xxx_battery_read_chem_id\n");
+
+	ret = bq27xxx_write(di, BQ27XXX_REG_CTRL, (u16)(0x0008), false);
+	if (ret < 0) {
+		dev_err(di->dev,"bq27xxx_write: Error bq27xxx_write\n");
+		return -EINVAL;
+	}
+
+	ret = bq27xxx_read(di, BQ27XXX_REG_CTRL, false);
+	if (ret < 0) {
+		dev_err(di->dev, "bq27xxx_write: Error bq27xxx_read\n");
+		return -EINVAL;
+	}
+
+	/* Chem ID is report as hex */
+	switch(ret) {
+	case 0x3230 :
+		chem_id = 3230;
+		break;
+	case 0x1202 :
+		chem_id = 1202;
+		break;
+	case 0x3142 :
+		chem_id = 3142;
+		break;
+	default :
+		dev_err(di->dev, "Invalid CHEM_ID: %d\n", ret);
+	}
+
+	return chem_id;
+}
+
+static int bq27xxx_battery_set_chem_id(struct bq27xxx_device_info *di, unsigned int val)
+{
+	bool cfgup = di->opts & BQ27XXX_O_CFGUP;
+	int ret;
+	u16 cmd = BQ27XXX_CHEM_B_1202;
+
+	dev_info(di->dev, "bq27xxx_battery_set_chem_id\n");
+
+	switch(val) {
+	case 3230 :
+		cmd = BQ27XXX_CHEM_A_3230;
+		break;
+	case 1202 :
+		cmd = BQ27XXX_CHEM_B_1202;
+		break;
+	case 3142 :
+		cmd = BQ27XXX_CHEM_C_3142;
+		break;
+	default :
+		dev_err(di->dev, "Invalid CHEM_ID: %d\n", val);
+		return -EINVAL;
+	}
+
+	ret = bq27xxx_battery_unseal(di);
+	if(ret < 0)
+		return ret;
+
+	if (cfgup) {
+		ret = bq27xxx_battery_set_cfgupdate(di);
+		if (ret < 0)
+			goto out;
+	}
+
+	BQ27XXX_MSLEEP(1);
+
+	ret = bq27xxx_write(di, BQ27XXX_REG_CTRL, cmd, false);
+	if (ret < 0)
+		goto out;
+
+	/* DO NOT read BQ27XXX_DM_CKSUM here to verify it! That may cause NVM
+	 * corruption on the '425 chip (and perhaps others), which can damage
+	 * the chip.
+	 */
+
+	if (cfgup) {
+		BQ27XXX_MSLEEP(1);
+		ret = bq27xxx_battery_soft_reset(di);
+		if (ret < 0)
+			return ret;
+	} else {
+		BQ27XXX_MSLEEP(100); /* flash DM updates in <100ms */
+	}
+
+	bq27xxx_battery_seal(di);
+
+	if (!(di->opts & BQ27XXX_O_CFGUP)) {
+		bq27xxx_write(di, BQ27XXX_REG_CTRL, BQ27XXX_RESET, false);
+		BQ27XXX_MSLEEP(300); /* reset time is not documented */
+	}
+
+	return 0;
+
+out:
+	if (cfgup)
+		bq27xxx_battery_soft_reset(di);
+
+	bq27xxx_battery_seal(di);
+
+	dev_err(di->dev, "bus error writing CHEM_ID: %d\n", ret);
+	return ret;
+}
+
 static void bq27xxx_battery_set_config(struct bq27xxx_device_info *di,
 				       struct power_supply_battery_info *info)
 {
 	struct bq27xxx_dm_buf bd = BQ27XXX_DM_BUF(di, BQ27XXX_DM_DESIGN_CAPACITY);
 	struct bq27xxx_dm_buf bt = BQ27XXX_DM_BUF(di, BQ27XXX_DM_TERMINATE_VOLTAGE);
 	bool updated;
+
+	dev_info(di->dev, "bq27xxx_battery_set_config\n");
 
 	if (bq27xxx_battery_unseal(di) < 0)
 		return;
@@ -1366,10 +1545,197 @@ static void bq27xxx_battery_set_config(struct bq27xxx_device_info *di,
 	/* assume bq27xxx_battery_update() is called hereafter */
 }
 
+static int bq27xxx_battery_set_termination_voltage(struct bq27xxx_device_info *di,
+				       unsigned int val_uv)
+{
+	struct bq27xxx_dm_buf bt = BQ27XXX_DM_BUF(di,BQ27XXX_DM_TERMINATE_VOLTAGE);
+	bool updated;
+	unsigned int max,min;
+	int ret;
+
+	dev_info(di->dev, "bq27xxx_battery_set_termination_voltage\n");
+
+	if (!di->dm_regs) {
+		dev_warn(di->dev, "data memory update not supported for chip\n");
+		return -EINVAL;
+	}
+
+	min = di->dm_regs[BQ27XXX_DM_TERMINATE_VOLTAGE].min;
+	max = di->dm_regs[BQ27XXX_DM_TERMINATE_VOLTAGE].max;
+	if ((val_uv < min * 1000 ||
+	     val_uv > max * 1000) &&
+	     val_uv != -EINVAL) {
+		dev_err(di->dev, "invalid battery:voltage-min-design-microvolt %d\n",
+			val_uv);
+		val_uv = -EINVAL;
+	}
+
+	ret = bq27xxx_battery_unseal(di);
+	if ( ret < 0)
+		goto out;
+
+	if (val_uv != -EINVAL) {
+		ret = bq27xxx_battery_read_dm_block(di, &bt);
+		if ( ret < 0)
+			goto out;
+		bq27xxx_battery_update_dm_block(di, &bt,
+			BQ27XXX_DM_TERMINATE_VOLTAGE,
+			val_uv / 1000);
+	}
+
+	updated = bt.dirty;
+
+	ret = bq27xxx_battery_write_dm_block(di, &bt);
+	if ( ret < 0)
+		goto out;
+
+	bq27xxx_battery_seal(di);
+
+	if (updated && !(di->opts & BQ27XXX_O_CFGUP)) {
+		bq27xxx_write(di, BQ27XXX_REG_CTRL, BQ27XXX_RESET, false);
+		BQ27XXX_MSLEEP(300); /* reset time is not documented */
+	}
+	
+	return 0;
+
+out:
+	bq27xxx_battery_seal(di);
+	bq27xxx_write(di, BQ27XXX_REG_CTRL, BQ27XXX_RESET, false);
+	BQ27XXX_MSLEEP(300); /* reset time is not documented */
+
+	dev_err(di->dev, "bus error writing DESIGN_ENERGY: %d\n", ret);
+	return ret;
+}
+
+
+static int bq27xxx_battery_set_design_energy(struct bq27xxx_device_info *di,
+				       unsigned int val_uwh)
+{
+	struct bq27xxx_dm_buf bd = BQ27XXX_DM_BUF(di, BQ27XXX_DM_DESIGN_CAPACITY);
+	bool updated;
+	unsigned int max;
+	int ret;
+
+	dev_info(di->dev, "bq27xxx_battery_set_design_energy\n");
+
+	if (!di->dm_regs) {
+		dev_warn(di->dev, "data memory update not supported for chip\n");
+		return -EINVAL;
+	}
+
+	/* assume min == 0 */
+	max = di->dm_regs[BQ27XXX_DM_DESIGN_ENERGY].max;
+	if (val_uwh > max * 1000) {
+		dev_err(di->dev, "invalid battery:charge-full-design-microamp-hours %d\n",
+			val_uwh);
+		val_uwh = -EINVAL;
+	}
+
+	ret = bq27xxx_battery_unseal(di);
+	if ( ret < 0)
+		goto out;
+
+	if (val_uwh != -EINVAL) {
+		ret = bq27xxx_battery_read_dm_block(di, &bd);
+		if ( ret < 0)
+			goto out;
+		/* assume design energy & capacity are in same block */
+		bq27xxx_battery_update_dm_block(di, &bd,
+			BQ27XXX_DM_DESIGN_ENERGY,
+			val_uwh / 1000);
+	}
+
+	updated = bd.dirty;
+
+	ret = bq27xxx_battery_write_dm_block(di, &bd);
+	if ( ret < 0)
+		goto out;
+
+	bq27xxx_battery_seal(di);
+
+	if (updated && !(di->opts & BQ27XXX_O_CFGUP)) {
+		bq27xxx_write(di, BQ27XXX_REG_CTRL, BQ27XXX_RESET, false);
+		BQ27XXX_MSLEEP(300); /* reset time is not documented */
+	}
+	
+	return 0;
+
+out:
+	bq27xxx_battery_seal(di);
+	bq27xxx_write(di, BQ27XXX_REG_CTRL, BQ27XXX_RESET, false);
+	BQ27XXX_MSLEEP(300); /* reset time is not documented */
+
+	dev_err(di->dev, "bus error writing DESIGN_ENERGY: %d\n", ret);
+	return ret;
+}
+
+static int bq27xxx_battery_set_dcap(struct bq27xxx_device_info *di,
+				       unsigned int val_uah)
+{
+	struct bq27xxx_dm_buf bd = BQ27XXX_DM_BUF(di, BQ27XXX_DM_DESIGN_CAPACITY);
+	bool updated;
+	unsigned int max;
+	int ret;
+
+	dev_info(di->dev, "bq27xxx_battery_set_dcap\n");
+
+	if (!di->dm_regs) {
+		dev_warn(di->dev, "data memory update not supported for chip\n");
+		return -EINVAL;
+	}
+
+	/* assume min == 0 */
+	max = di->dm_regs[BQ27XXX_DM_DESIGN_CAPACITY].max;
+	if (val_uah > max * 1000) {
+		dev_err(di->dev, "invalid battery:charge-full-design-microamp-hours %d\n",
+			val_uah);
+		val_uah = -EINVAL;
+	}
+
+	ret = bq27xxx_battery_unseal(di);
+	if ( ret < 0)
+		goto out;
+
+	if (val_uah != -EINVAL) {
+		ret = bq27xxx_battery_read_dm_block(di, &bd);
+		if ( ret < 0)
+			goto out;
+		/* assume design energy & capacity are in same block */
+		bq27xxx_battery_update_dm_block(di, &bd,
+			BQ27XXX_DM_DESIGN_CAPACITY,
+			val_uah / 1000);
+	}
+
+	updated = bd.dirty;
+
+	ret = bq27xxx_battery_write_dm_block(di, &bd);
+	if ( ret < 0)
+		goto out;
+
+	bq27xxx_battery_seal(di);
+
+	if (updated && !(di->opts & BQ27XXX_O_CFGUP)) {
+		bq27xxx_write(di, BQ27XXX_REG_CTRL, BQ27XXX_RESET, false);
+		BQ27XXX_MSLEEP(300); /* reset time is not documented */
+	}
+	
+	return 0;
+
+out:
+	bq27xxx_battery_seal(di);
+	bq27xxx_write(di, BQ27XXX_REG_CTRL, BQ27XXX_RESET, false);
+	BQ27XXX_MSLEEP(300); /* reset time is not documented */
+
+	dev_err(di->dev, "bus error writing DESIGN_CAPACITY: %d\n", ret);
+	return ret;
+}
+
 static void bq27xxx_battery_settings(struct bq27xxx_device_info *di)
 {
 	struct power_supply_battery_info info = {};
 	unsigned int min, max;
+
+	dev_info(di->dev, "bq27xxx_battery_settings\n");
 
 	if (power_supply_get_battery_info(di->bat, &info) < 0)
 		return;
@@ -1412,10 +1778,18 @@ static void bq27xxx_battery_settings(struct bq27xxx_device_info *di)
 		info.voltage_min_design_uv = -EINVAL;
 	}
 
+	if((info.chem_id != 1202) && (info.chem_id != 3230) && (info.chem_id != 3142)) {
+		dev_err(di->dev, "invalid battery:chem-id %d\n", info.chem_id);
+		info.chem_id = -EINVAL;
+	}
+
 	if ((info.energy_full_design_uwh != -EINVAL &&
 	     info.charge_full_design_uah != -EINVAL) ||
 	     info.voltage_min_design_uv  != -EINVAL)
 		bq27xxx_battery_set_config(di, &info);
+
+	if(info.chem_id != -EINVAL)
+		bq27xxx_battery_set_chem_id(di, info.chem_id);
 }
 
 /*
@@ -1492,15 +1866,47 @@ static inline int bq27xxx_battery_read_fcc(struct bq27xxx_device_info *di)
  */
 static int bq27xxx_battery_read_dcap(struct bq27xxx_device_info *di)
 {
-	int dcap;
+	int dcap = -EINVAL;
+	enum bq27xxx_dm_reg_id reg_id = BQ27XXX_DM_DESIGN_CAPACITY;
+	struct bq27xxx_dm_buf buf = BQ27XXX_DM_BUF(di, reg_id);
+	struct bq27xxx_dm_reg *reg = &di->dm_regs[reg_id];
+	const char *str = bq27xxx_dm_reg_name[reg_id];
 
-	if (di->opts & BQ27XXX_O_ZERO)
-		dcap = bq27xxx_read(di, BQ27XXX_REG_DCAP, true);
-	else
-		dcap = bq27xxx_read(di, BQ27XXX_REG_DCAP, false);
+	dev_info(di->dev, "bq27xxx_battery_read_dcap\n");
+
+	if (bq27xxx_battery_unseal(di) < 0) {
+		dev_err(di->dev, "bq27xxx_battery_read_dcap: bq27xxx_battery_unseal(di) < 0\n");
+		return -EINVAL;
+	}
+
+	bq27xxx_battery_read_dm_block(di, &buf);
+
+	bq27xxx_battery_seal(di);
+
+	{
+		u16 *prev = bq27xxx_dm_reg_ptr(&buf, reg);
+
+		if (prev == NULL) {
+			dev_err(di->dev, "buffer does not match %s dm spec\n", str);
+			return -EINVAL;
+		}
+
+		if (reg->bytes != 2) {
+			dev_err(di->dev, "%s dm spec has unsupported byte size\n", str);
+			return -EINVAL;
+		}
+
+		if (!(buf.has_data))
+		{
+			dev_err(di->dev, "buffer has no data\n");
+			return -EINVAL;
+		}
+
+		dcap = be16_to_cpup(prev);
+	}
 
 	if (dcap < 0) {
-		dev_dbg(di->dev, "error reading initial last measured discharge\n");
+		dev_err(di->dev, "error reading design capacity\n");
 		return dcap;
 	}
 
@@ -1510,6 +1916,116 @@ static int bq27xxx_battery_read_dcap(struct bq27xxx_device_info *di)
 		dcap *= 1000;
 
 	return dcap;
+}
+
+/*
+ * Return the Design Energy in µWh
+ * Or < 0 if something fails.
+ */
+static int bq27xxx_battery_read_design_energy(struct bq27xxx_device_info *di)
+{
+	int den = -EINVAL;
+	enum bq27xxx_dm_reg_id reg_id = BQ27XXX_DM_DESIGN_ENERGY;
+	struct bq27xxx_dm_buf buf = BQ27XXX_DM_BUF(di, reg_id);
+	struct bq27xxx_dm_reg *reg = &di->dm_regs[reg_id];
+	const char *str = bq27xxx_dm_reg_name[reg_id];
+
+	dev_info(di->dev, "bq27xxx_battery_read_design_energy\n");
+
+	if (bq27xxx_battery_unseal(di) < 0) {
+		dev_err(di->dev, "bq27xxx_battery_read_design_energy: bq27xxx_battery_unseal(di) < 0\n");
+		return -EINVAL;
+	}
+
+	bq27xxx_battery_read_dm_block(di, &buf);
+
+	bq27xxx_battery_seal(di);
+
+	{
+		u16 *prev = bq27xxx_dm_reg_ptr(&buf, reg);
+
+		if (prev == NULL) {
+			dev_err(di->dev, "buffer does not match %s dm spec\n", str);
+			return -EINVAL;
+		}
+
+		if (reg->bytes != 2) {
+			dev_err(di->dev, "%s dm spec has unsupported byte size\n", str);
+			return -EINVAL;
+		}
+
+		if (!(buf.has_data))
+		{
+			dev_err(di->dev, "buffer has no data\n");
+			return -EINVAL;
+		}
+
+		den = be16_to_cpup(prev);
+	}
+
+	if (den < 0) {
+		dev_err(di->dev, "error reading design energy\n");
+		return den;
+	}
+
+	den *= 1000;
+
+	return den;
+}
+
+/*
+ * Return the Termination Voltage in µV
+ * Or < 0 if something fails.
+ */
+static int bq27xxx_battery_read_termination_voltage(struct bq27xxx_device_info *di)
+{
+	int val = -EINVAL;
+	enum bq27xxx_dm_reg_id reg_id = BQ27XXX_DM_TERMINATE_VOLTAGE;
+	struct bq27xxx_dm_buf buf = BQ27XXX_DM_BUF(di, reg_id);
+	struct bq27xxx_dm_reg *reg = &di->dm_regs[reg_id];
+	const char *str = bq27xxx_dm_reg_name[reg_id];
+
+	dev_info(di->dev, "bq27xxx_battery_read_termination_voltage\n");
+
+	if (bq27xxx_battery_unseal(di) < 0) {
+		dev_err(di->dev, "bq27xxx_battery_read_termination_voltage: bq27xxx_battery_unseal(di) < 0\n");
+		return -EINVAL;
+	}
+
+	bq27xxx_battery_read_dm_block(di, &buf);
+
+	bq27xxx_battery_seal(di);
+
+	{
+		u16 *prev = bq27xxx_dm_reg_ptr(&buf, reg);
+
+		if (prev == NULL) {
+			dev_err(di->dev, "buffer does not match %s dm spec\n", str);
+			return -EINVAL;
+		}
+
+		if (reg->bytes != 2) {
+			dev_err(di->dev, "%s dm spec has unsupported byte size\n", str);
+			return -EINVAL;
+		}
+
+		if (!(buf.has_data))
+		{
+			dev_err(di->dev, "buffer has no data\n");
+			return -EINVAL;
+		}
+
+		val = be16_to_cpup(prev);
+	}
+
+	if (val < 0) {
+		dev_err(di->dev, "error reading termination voltage\n");
+		return val;
+	}
+
+	val *= 1000;
+
+	return val;
 }
 
 /*
@@ -1667,6 +2183,8 @@ void bq27xxx_battery_update(struct bq27xxx_device_info *di)
 	bool has_ci_flag = di->opts & BQ27XXX_O_ZERO;
 	bool has_singe_flag = di->opts & BQ27XXX_O_ZERO;
 
+	dev_info(di->dev, "bq27xxx_battery_update\n");
+
 	cache.flags = bq27xxx_read(di, BQ27XXX_REG_FLAGS, has_singe_flag);
 	if ((cache.flags & 0xff) == 0xff)
 		cache.flags = -1; /* read error */
@@ -1701,14 +2219,17 @@ void bq27xxx_battery_update(struct bq27xxx_device_info *di)
 		if (di->regs[BQ27XXX_REG_AP] != INVALID_REG_ADDR)
 			cache.power_avg = bq27xxx_battery_read_pwr_avg(di);
 
-		/* We only have to read charge design full once */
-		if (di->charge_design_full <= 0)
-			di->charge_design_full = bq27xxx_battery_read_dcap(di);
+		cache.charge_design_full = bq27xxx_battery_read_dcap(di);
+		cache.chem_id = bq27xxx_battery_read_chem_id(di);
 	}
 
-	if ((di->cache.capacity != cache.capacity) ||
-	    (di->cache.flags != cache.flags))
+	if ((di->cache.charge_design_full != cache.charge_design_full) ||
+			(di->cache.chem_id != cache.chem_id) ||
+			(di->cache.capacity != cache.capacity) ||
+			(di->cache.flags != cache.flags)) {
 		power_supply_changed(di->bat);
+		bq27xxx_battery_settings(di);
+	}
 
 	if (memcmp(&di->cache, &cache, sizeof(cache)) != 0)
 		di->cache = cache;
@@ -1722,6 +2243,8 @@ static void bq27xxx_battery_poll(struct work_struct *work)
 	struct bq27xxx_device_info *di =
 			container_of(work, struct bq27xxx_device_info,
 				     work.work);
+
+	dev_info(di->dev, "bq27xxx_battery_poll\n");
 
 	bq27xxx_battery_update(di);
 
@@ -1865,12 +2388,46 @@ static int bq27xxx_simple_value(int value,
 	return 0;
 }
 
+static int bq27xxx_battery_set_property(struct power_supply *psy,
+			    enum power_supply_property psp,
+			    const union power_supply_propval *val)
+{
+	int ret = 0;
+	struct bq27xxx_device_info *di = power_supply_get_drvdata(psy);
+
+	dev_info(di->dev, "bq27xxx_battery_set_property\n");
+
+	if (psp != POWER_SUPPLY_PROP_PRESENT && di->cache.flags < 0)
+		return -ENODEV;
+
+	switch (psp) {
+	case POWER_SUPPLY_PROP_CHEM_ID:
+		ret = bq27xxx_battery_set_chem_id(di, val->intval);
+		break;
+	case POWER_SUPPLY_PROP_CHARGE_FULL_DESIGN:
+		ret = bq27xxx_battery_set_dcap(di, val->intval);
+		break;
+	case POWER_SUPPLY_PROP_ENERGY_FULL_DESIGN:
+		ret = bq27xxx_battery_set_design_energy(di, val->intval);
+		break;
+	case POWER_SUPPLY_PROP_VOLTAGE_MIN_DESIGN:
+		ret = bq27xxx_battery_set_termination_voltage(di, val->intval);
+		break;
+	default:
+		return -EINVAL;
+	}
+
+	return ret;
+}
+
 static int bq27xxx_battery_get_property(struct power_supply *psy,
 					enum power_supply_property psp,
 					union power_supply_propval *val)
 {
 	int ret = 0;
 	struct bq27xxx_device_info *di = power_supply_get_drvdata(psy);
+
+	dev_info(di->dev, "bq27xxx_battery_get_property\n");
 
 	mutex_lock(&di->lock);
 	if (time_is_before_jiffies(di->last_update + 5 * HZ)) {
@@ -1925,15 +2482,21 @@ static int bq27xxx_battery_get_property(struct power_supply *psy,
 		ret = bq27xxx_simple_value(di->cache.charge_full, val);
 		break;
 	case POWER_SUPPLY_PROP_CHARGE_FULL_DESIGN:
-		ret = bq27xxx_simple_value(di->charge_design_full, val);
+		dev_info(di->dev, "bq27xxx_battery_get_property: Getting dcap\n");
+		ret = bq27xxx_simple_value(bq27xxx_battery_read_dcap(di), val);
 		break;
 	/*
 	 * TODO: Implement these to make registers set from
 	 * power_supply_battery_info visible in sysfs.
 	 */
 	case POWER_SUPPLY_PROP_ENERGY_FULL_DESIGN:
+		dev_info(di->dev, "bq27xxx_battery_get_property: Getting design energy\n");
+		ret = bq27xxx_simple_value(bq27xxx_battery_read_design_energy(di), val);
+		break;
 	case POWER_SUPPLY_PROP_VOLTAGE_MIN_DESIGN:
-		return -EINVAL;
+		dev_info(di->dev, "bq27xxx_battery_get_property: Getting termination voltage\n");
+		ret = bq27xxx_simple_value(bq27xxx_battery_read_termination_voltage(di), val);
+		break;
 	case POWER_SUPPLY_PROP_CYCLE_COUNT:
 		ret = bq27xxx_simple_value(di->cache.cycle_count, val);
 		break;
@@ -1949,6 +2512,9 @@ static int bq27xxx_battery_get_property(struct power_supply *psy,
 	case POWER_SUPPLY_PROP_MANUFACTURER:
 		val->strval = BQ27XXX_MANUFACTURER;
 		break;
+	case POWER_SUPPLY_PROP_CHEM_ID:
+		ret = bq27xxx_simple_value(bq27xxx_battery_read_chem_id(di), val);
+		break;
 	default:
 		return -EINVAL;
 	}
@@ -1959,6 +2525,8 @@ static int bq27xxx_battery_get_property(struct power_supply *psy,
 static void bq27xxx_external_power_changed(struct power_supply *psy)
 {
 	struct bq27xxx_device_info *di = power_supply_get_drvdata(psy);
+
+	dev_info(di->dev,"bq27xxx_external_power_changed\n");
 
 	cancel_delayed_work_sync(&di->work);
 	schedule_delayed_work(&di->work, 0);
@@ -1971,6 +2539,8 @@ int bq27xxx_battery_setup(struct bq27xxx_device_info *di)
 		.of_node = di->dev->of_node,
 		.drv_data = di,
 	};
+
+	dev_info(di->dev, "bq27xxx_battery_setup\n");
 
 	INIT_DELAYED_WORK(&di->work, bq27xxx_battery_poll);
 	mutex_init(&di->lock);
@@ -1989,6 +2559,7 @@ int bq27xxx_battery_setup(struct bq27xxx_device_info *di)
 	psy_desc->properties = bq27xxx_chip_data[di->chip].props;
 	psy_desc->num_properties = bq27xxx_chip_data[di->chip].props_size;
 	psy_desc->get_property = bq27xxx_battery_get_property;
+	psy_desc->set_property = bq27xxx_battery_set_property;
 	psy_desc->external_power_changed = bq27xxx_external_power_changed;
 
 	di->bat = power_supply_register_no_ws(di->dev, psy_desc, &psy_cfg);
@@ -2019,6 +2590,9 @@ void bq27xxx_battery_teardown(struct bq27xxx_device_info *di)
 	 * Make sure that bq27xxx_battery_poll will not call
 	 * schedule_delayed_work again after unregister (which cause OOPS).
 	 */
+
+	dev_info(di->dev, "bq27xxx_battery_teardown\n");
+
 	poll_interval = 0;
 
 	cancel_delayed_work_sync(&di->work);

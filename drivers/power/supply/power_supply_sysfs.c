@@ -81,6 +81,8 @@ static ssize_t power_supply_show_property(struct device *dev,
 	const ptrdiff_t off = attr - power_supply_attrs;
 	union power_supply_propval value;
 
+	dev_info(dev, "power_supply_show_property\n");
+
 	if (off == POWER_SUPPLY_PROP_TYPE) {
 		value.intval = psy->desc->type;
 	} else {
@@ -131,6 +133,8 @@ static ssize_t power_supply_store_property(struct device *dev,
 	struct power_supply *psy = dev_get_drvdata(dev);
 	const ptrdiff_t off = attr - power_supply_attrs;
 	union power_supply_propval value;
+
+	dev_info(dev, "power_supply_store_property\n");
 
 	/* maybe it is a enum property? */
 	switch (off) {
@@ -245,6 +249,7 @@ static struct device_attribute power_supply_attrs[] = {
 	POWER_SUPPLY_ATTR(precharge_current),
 	POWER_SUPPLY_ATTR(charge_term_current),
 	POWER_SUPPLY_ATTR(calibrate),
+	POWER_SUPPLY_ATTR(chem_id),
 	/* Properties of type `const char *' */
 	POWER_SUPPLY_ATTR(model_name),
 	POWER_SUPPLY_ATTR(manufacturer),
@@ -295,6 +300,8 @@ void power_supply_init_attrs(struct device_type *dev_type)
 {
 	int i;
 
+	printk("power_supply_init_attrs\n");
+
 	dev_type->groups = power_supply_attr_groups;
 
 	for (i = 0; i < ARRAY_SIZE(power_supply_attrs); i++)
@@ -324,6 +331,8 @@ int power_supply_uevent(struct device *dev, struct kobj_uevent_env *env)
 	int ret = 0, j;
 	char *prop_buf;
 	char *attrname;
+
+	dev_info(dev, "power_supply_uevent\n");
 
 	dev_dbg(dev, "uevent\n");
 
