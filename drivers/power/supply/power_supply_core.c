@@ -65,8 +65,6 @@ static int __power_supply_changed_work(struct device *dev, void *data)
 	struct power_supply *psy = data;
 	struct power_supply *pst = dev_get_drvdata(dev);
 
-	printk("__power_supply_changed_work\n");
-
 	if (__power_supply_is_supplied_by(psy, pst)) {
 		if (pst->desc->external_power_changed)
 			pst->desc->external_power_changed(pst);
@@ -80,8 +78,6 @@ static void power_supply_changed_work(struct work_struct *work)
 	unsigned long flags;
 	struct power_supply *psy = container_of(work, struct power_supply,
 						changed_work);
-
-	dev_info(&psy->dev, "power_supply_changed_work\n");
 
 	dev_dbg(&psy->dev, "%s\n", __func__);
 
@@ -119,8 +115,6 @@ void power_supply_changed(struct power_supply *psy)
 {
 	unsigned long flags;
 
-	dev_info(&psy->dev, "power_supply_changed\n");
-
 	dev_dbg(&psy->dev, "%s\n", __func__);
 
 	spin_lock_irqsave(&psy->changed_lock, flags);
@@ -145,8 +139,6 @@ static void power_supply_deferred_register_work(struct work_struct *work)
 {
 	struct power_supply *psy = container_of(work, struct power_supply,
 						deferred_register_work.work);
-
-	dev_info(&psy->dev, "power_supply_deferred_register_work\n");
 
 	if (psy->dev.parent) {
 		while (!mutex_trylock(&psy->dev.parent->mutex)) {
@@ -221,8 +213,6 @@ static int power_supply_find_supply_from_node(struct device_node *supply_node)
 {
 	int error;
 
-	printk("power_supply_find_supply_from_node\n");
-
 	/*
 	 * class_for_each_device() either returns its own errors or values
 	 * returned by __power_supply_find_supply_from_node().
@@ -243,8 +233,6 @@ static int power_supply_check_supplies(struct power_supply *psy)
 {
 	struct device_node *np;
 	int cnt = 0;
-
-	dev_info(&psy->dev, "power_supply_check_supplies\n");
 
 	/* If there is already a list honor it */
 	if (psy->supplied_from && psy->num_supplies > 0)
@@ -292,8 +280,6 @@ static int power_supply_check_supplies(struct power_supply *psy)
 static int power_supply_check_supplies(struct power_supply *psy)
 {
 	int nval, ret;
-
-	printk("power_supply_check_supplies\n");
 
 	if (!psy->dev.parent)
 		return 0;
@@ -470,8 +456,6 @@ struct power_supply *power_supply_get_by_name(const char *name)
 	struct device *dev = class_find_device(power_supply_class, NULL, name,
 					power_supply_match_device_by_name);
 
-	printk("*power_supply_get_by_name\n");
-
 	if (dev) {
 		psy = dev_get_drvdata(dev);
 		atomic_inc(&psy->use_cnt);
@@ -490,7 +474,6 @@ EXPORT_SYMBOL_GPL(power_supply_get_by_name);
  */
 void power_supply_put(struct power_supply *psy)
 {
-	printk("power_supply_put\n");
 	might_sleep();
 
 	atomic_dec(&psy->use_cnt);
@@ -522,8 +505,6 @@ struct power_supply *power_supply_get_by_phandle(struct device_node *np,
 	struct device_node *power_supply_np;
 	struct power_supply *psy = NULL;
 	struct device *dev;
-
-	printk("power_supply_get_by_phandle\n");
 
 	power_supply_np = of_parse_phandle(np, property, 0);
 	if (!power_supply_np)
@@ -564,8 +545,6 @@ struct power_supply *devm_power_supply_get_by_phandle(struct device *dev,
 {
 	struct power_supply **ptr, *psy;
 
-	printk("*devm_power_supply_get_by_phandle\n");
-
 	if (!dev->of_node)
 		return ERR_PTR(-ENODEV);
 
@@ -592,8 +571,6 @@ int power_supply_get_battery_info(struct power_supply *psy,
 	const char *value;
 	int err;
 
-	dev_info(&psy->dev, "power_supply_get_battery_info\n");
-
 	info->energy_full_design_uwh         = -EINVAL;
 	info->charge_full_design_uah         = -EINVAL;
 	info->voltage_min_design_uv          = -EINVAL;
@@ -604,7 +581,7 @@ int power_supply_get_battery_info(struct power_supply *psy,
 	info->chem_id                        = -EINVAL;
 
 	if (!psy->of_node) {
-		dev_warn(&psy->dev, "%s currently only supports devicetree\n",
+		dev_dbg(&psy->dev, "%s currently only supports devicetree\n",
 			 __func__);
 		return -ENXIO;
 	}
@@ -684,7 +661,6 @@ EXPORT_SYMBOL_GPL(power_supply_property_is_writeable);
 
 void power_supply_external_power_changed(struct power_supply *psy)
 {
-	printk("power_supply_external_power_changed\n");
 	if (atomic_read(&psy->use_cnt) <= 0 ||
 			!psy->desc->external_power_changed)
 		return;
@@ -702,7 +678,6 @@ EXPORT_SYMBOL_GPL(power_supply_powers);
 static void power_supply_dev_release(struct device *dev)
 {
 	struct power_supply *psy = container_of(dev, struct power_supply, dev);
-	printk("power_supply_dev_release\n");
 	pr_debug("device: '%s': %s\n", dev_name(dev), __func__);
 	kfree(psy);
 }
@@ -879,8 +854,6 @@ __power_supply_register(struct device *parent,
 	struct power_supply *psy;
 	int rc;
 
-	printk("__power_supply_register\n");
-
 	if (!parent)
 		pr_warn("%s: Expected proper parent device for '%s'\n",
 			__func__, desc->name);
@@ -1045,8 +1018,6 @@ devm_power_supply_register(struct device *parent,
 		const struct power_supply_config *cfg)
 {
 	struct power_supply **ptr, *psy;
-	
-	printk("devm_power_supply_register\n");
 
 	ptr = devres_alloc(devm_power_supply_release, sizeof(*ptr), GFP_KERNEL);
 
@@ -1084,8 +1055,6 @@ devm_power_supply_register_no_ws(struct device *parent,
 {
 	struct power_supply **ptr, *psy;
 
-	printk("devm_power_supply_register_no_ws\n");
-
 	ptr = devres_alloc(devm_power_supply_release, sizeof(*ptr), GFP_KERNEL);
 
 	if (!ptr)
@@ -1110,9 +1079,6 @@ EXPORT_SYMBOL_GPL(devm_power_supply_register_no_ws);
  */
 void power_supply_unregister(struct power_supply *psy)
 {
-
-	dev_info(&psy->dev, "power_supply_unregister\n");
-
 	WARN_ON(atomic_dec_return(&psy->use_cnt));
 	psy->removing = true;
 	cancel_work_sync(&psy->changed_work);
@@ -1134,8 +1100,6 @@ EXPORT_SYMBOL_GPL(power_supply_get_drvdata);
 
 static int __init power_supply_class_init(void)
 {
-	printk("power_supply_class_init\n");
-
 	power_supply_class = class_create(THIS_MODULE, "power_supply");
 
 	if (IS_ERR(power_supply_class))
@@ -1149,8 +1113,6 @@ static int __init power_supply_class_init(void)
 
 static void __exit power_supply_class_exit(void)
 {
-	printk("power_supply_class_exit\n");
-
 	class_destroy(power_supply_class);
 }
 
