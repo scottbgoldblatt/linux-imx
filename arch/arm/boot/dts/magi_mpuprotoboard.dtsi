@@ -22,7 +22,7 @@
 		stdout-path = &uart1;
 	};
 
-  keys {
+  /*keys {
 		compatible = "gpio-keys";
 		pinctrl-names = "default";
 		pinctrl-0 = <&pinctrl_gpio_keys>;
@@ -32,7 +32,7 @@
 			linux,code = <KEY_BACK>;
 			gpio-key,wakeup;
 		};
-	};
+	};*/
 
 	leds {
 		compatible = "gpio-leds";
@@ -117,38 +117,65 @@
 		pinctrl-names = "default";
 		pinctrl-0 = <&pinctrl_wake_pins>;
 
-    gpio5_io1 {
+    /*gpio5_io1 {
 			label = "MAGI Wake Pin 1 (BTN_1)";
 			gpios = <&gpio5 1 GPIO_ACTIVE_LOW>;
 			linux,code = <BTN_1>;
 			gpio-key,wakeup;
-		};
+		};*/
 
+		/* MCU Motion Alert */
     gpio5_io3 {
-			label = "MAGI Wake Pin 3 (BTN_3)";
+			label = "MAGI IMU Motion Detect (KEY_MOVE)";
 			gpios = <&gpio5 3 GPIO_ACTIVE_LOW>;
-			linux,code = <BTN_3>;
+			linux,code = <KEY_MOVE>;
 			gpio-key,wakeup;
 		};
         
-    gpio5_io5 {
+    /*gpio5_io5 {
 			label = "MAGI Wake Pin 5 (BTN_5)";
 			gpios = <&gpio5 5 GPIO_ACTIVE_LOW>;
 			linux,code = <BTN_5>;
 			gpio-key,wakeup;
-		};
+		};*/
 
+		/* Keypad Select */
     gpio5_io8 {
-			label = "MAGI Wake Pin 8 (BTN_8)";
+			label = "MAGI Wake Pin 8 (BTN_SELECT)";
 			gpios = <&gpio5 8 GPIO_ACTIVE_LOW>;
-			linux,code = <BTN_8>;
+			linux,code = <BTN_SELECT>;
 			gpio-key,wakeup;
 		};
 
-    gpio5_io9 {
-			label = "MAGI Wake Pin 9 (BTN_9)";
-			gpios = <&gpio5 9 GPIO_ACTIVE_LOW>;
-			linux,code = <BTN_9>;
+    /* Keypad East */
+    gpio1_io4 {
+			label = "MAGI D-Pad East (BTN_DPAD_RIGHT)";
+			gpios = <&gpio1 4 GPIO_ACTIVE_LOW>;
+			linux,code = <BTN_DPAD_RIGHT>;
+			gpio-key,wakeup;
+		};
+
+		/* Keypad North */
+    gpio1_io1 {
+			label = "MAGI D-Pad North (BTN_DPAD_UP)";
+			gpios = <&gpio1 1 GPIO_ACTIVE_LOW>;
+			linux,code = <BTN_DPAD_UP>;
+			gpio-key,wakeup;
+		};
+
+		/* Keypad South */
+    gpio1_io2 {
+			label = "MAGI D-Pad South (BTN_DPAD_DOWN)";
+			gpios = <&gpio1 2 GPIO_ACTIVE_LOW>;
+			linux,code = <BTN_DPAD_DOWN>;
+			gpio-key,wakeup;
+		};
+
+		/* Keypad West */
+    gpio1_io9 {
+			label = "MAGI D-Pad West (BTN_DPAD_LEFT)";
+			gpios = <&gpio1 9 GPIO_ACTIVE_LOW>;
+			linux,code = <BTN_DPAD_LEFT>;
 			gpio-key,wakeup;
 		};
 	};
@@ -363,11 +390,11 @@
 		>;
 	};
 
-	pinctrl_gpio_keys: gpio_keysgrp {
+	/*pinctrl_gpio_keys: gpio_keysgrp {
 		fsl,pins = <
 			MX6UL_PAD_GPIO1_IO00__GPIO1_IO00	0x17059 /* User Button */
-		>;
-	};
+	/*	>;
+	};*/
 
 	pinctrl_gpio_leds: gpio_ledsgrp {
 		fsl,pins = <
