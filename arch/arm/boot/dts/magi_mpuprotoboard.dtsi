@@ -817,13 +817,15 @@
 };
 
 &usbotg1 {
-	dr_mode = "host";
-	status = "disabled";
+	dr_mode = "peripheral";
+	disable-over-current;
+	status = "okay";
 };
 
 &usbotg2 {
-	dr_mode = "host";
-	status = "disabled";
+	dr_mode = "peripheral";
+	disable-over-current;
+	status = "okay";
 };
 
 &usdhc1 {
